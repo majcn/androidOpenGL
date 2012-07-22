@@ -5,9 +5,9 @@ import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 
 public class MainActivity extends Activity {
-	
-	private GLSurfaceView mGLSurfaceView;
-
+    
+    private GLSurfaceView mGLSurfaceView;
+    
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -20,15 +20,13 @@ public class MainActivity extends Activity {
     
     @Override
     protected void onResume() {
-    	super.onResume();
-    	mGLSurfaceView.onResume();
+        super.onResume();
+        mGLSurfaceView.onResume();
     }
     
     @Override
     protected void onPause() {
-    	super.onPause();
-    	mGLSurfaceView.onPause();
+        super.onPause();
+        mGLSurfaceView.onPause();
     }
-
-    
 }
