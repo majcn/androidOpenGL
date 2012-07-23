@@ -50,7 +50,7 @@ public class ShaderHelper {
      * @param attributes Attributes that need to be bound to the program.
      * @return An OpenGL handle to the program.
      */
-    public static int createAndLinkProgram(final int vertexShaderHandle, final int fragmentShaderHandle, final String[] attributes) {
+    public static int createAndLinkProgram(final int vertexShaderHandle, final int fragmentShaderHandle) {
         int programHandle = GLES20.glCreateProgram();
         
         if (programHandle != 0) {
@@ -59,14 +59,6 @@ public class ShaderHelper {
             
             // Bind the fragment shader to the program.
             GLES20.glAttachShader(programHandle, fragmentShaderHandle);
-            
-            // Bind attributes
-            if (attributes != null) {
-                final int size = attributes.length;
-                for (int i = 0; i < size; i++) {
-                    GLES20.glBindAttribLocation(programHandle, i, attributes[i]);
-                }						
-            }
             
             // Link the two shaders together into a program.
             GLES20.glLinkProgram(programHandle);
