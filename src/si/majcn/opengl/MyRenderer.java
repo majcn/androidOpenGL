@@ -1,9 +1,5 @@
 package si.majcn.opengl;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
-
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -11,9 +7,11 @@ import android.content.Context;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
+import android.os.SystemClock;
 
 import com.learnopengles.android.common.RawReader;
 import com.learnopengles.android.common.ShaderHelper;
+import com.learnopengles.android.common.TextureHelper;
 
 public class MyRenderer implements GLSurfaceView.Renderer {
     
@@ -21,10 +19,8 @@ public class MyRenderer implements GLSurfaceView.Renderer {
     
     private int mProgramHandle;
     private int mPointProgramHandle;
-    
-    private final FloatBuffer mCubePosition;
-    private final FloatBuffer mCubeColor;
-    private final FloatBuffer mCubeNormal;
+
+    private Model mCube;
     
     private float[] mViewMatrix = new float[16];
     private float[] mModelMatrix = new float[16];
@@ -34,9 +30,11 @@ public class MyRenderer implements GLSurfaceView.Renderer {
     private int mMVPMatrixHandle;
     private int mMVMatrixHandle;
     private int mPositionHandle;
-    private int mColorHandle;
     private int mLightPosHandle;
     private int mNormalHandle;
+    private int mTextureDataHandle;
+    private int mTextureCoordinateHandle;
+    private int mTextureUniformHandle;
     
     private float[] mLightModelMatrix = new float[16];
     private final float[] mLightPosInModelSpace = new float[] {0.0f, 0.0f, 0.0f, 1.0f};
@@ -45,166 +43,8 @@ public class MyRenderer implements GLSurfaceView.Renderer {
     
     public MyRenderer(Context context) {
         
-        final float[] cubePositionData = {
-            // Front face
-            -1.0f, 1.0f, 1.0f,
-            -1.0f, -1.0f, 1.0f,
-            1.0f, 1.0f, 1.0f, 
-            -1.0f, -1.0f, 1.0f,
-            1.0f, -1.0f, 1.0f,
-            1.0f, 1.0f, 1.0f,
-
-            // Right face
-            1.0f, 1.0f, 1.0f,
-            1.0f, -1.0f, 1.0f,
-            1.0f, 1.0f, -1.0f,
-            1.0f, -1.0f, 1.0f,
-            1.0f, -1.0f, -1.0f,
-            1.0f, 1.0f, -1.0f,
-
-            // Back face
-            1.0f, 1.0f, -1.0f,
-            1.0f, -1.0f, -1.0f,
-            -1.0f, 1.0f, -1.0f,
-            1.0f, -1.0f, -1.0f,
-            -1.0f, -1.0f, -1.0f,
-            -1.0f, 1.0f, -1.0f,
-
-            // Left face
-            -1.0f, 1.0f, -1.0f,
-            -1.0f, -1.0f, -1.0f,
-            -1.0f, 1.0f, 1.0f, 
-            -1.0f, -1.0f, -1.0f,
-            -1.0f, -1.0f, 1.0f, 
-            -1.0f, 1.0f, 1.0f, 
-
-            // Top face
-            -1.0f, 1.0f, -1.0f,
-            -1.0f, 1.0f, 1.0f, 
-            1.0f, 1.0f, -1.0f, 
-            -1.0f, 1.0f, 1.0f,
-            1.0f, 1.0f, 1.0f, 
-            1.0f, 1.0f, -1.0f,
-
-            // Bottom face
-            1.0f, -1.0f, -1.0f,
-            1.0f, -1.0f, 1.0f, 
-            -1.0f, -1.0f, -1.0f,
-            1.0f, -1.0f, 1.0f,
-            -1.0f, -1.0f, 1.0f,
-            -1.0f, -1.0f, -1.0f,
-        };
-        
-        final float[] cubeColorData = {
-            // Front face (red)
-            1.0f, 0.0f, 0.0f, 1.0f,
-            1.0f, 0.0f, 0.0f, 1.0f,
-            1.0f, 0.0f, 0.0f, 1.0f,
-            1.0f, 0.0f, 0.0f, 1.0f,
-            1.0f, 0.0f, 0.0f, 1.0f,
-            1.0f, 0.0f, 0.0f, 1.0f,
-
-            // Right face (green)
-            0.0f, 1.0f, 0.0f, 1.0f,
-            0.0f, 1.0f, 0.0f, 1.0f,
-            0.0f, 1.0f, 0.0f, 1.0f,
-            0.0f, 1.0f, 0.0f, 1.0f,
-            0.0f, 1.0f, 0.0f, 1.0f,
-            0.0f, 1.0f, 0.0f, 1.0f,
-
-            // Back face (blue)
-            0.0f, 0.0f, 1.0f, 1.0f,
-            0.0f, 0.0f, 1.0f, 1.0f,
-            0.0f, 0.0f, 1.0f, 1.0f,
-            0.0f, 0.0f, 1.0f, 1.0f,
-            0.0f, 0.0f, 1.0f, 1.0f,
-            0.0f, 0.0f, 1.0f, 1.0f,
-
-            // Left face (yellow)
-            1.0f, 1.0f, 0.0f, 1.0f,
-            1.0f, 1.0f, 0.0f, 1.0f,
-            1.0f, 1.0f, 0.0f, 1.0f,
-            1.0f, 1.0f, 0.0f, 1.0f,
-            1.0f, 1.0f, 0.0f, 1.0f,
-            1.0f, 1.0f, 0.0f, 1.0f,
-
-            // Top face (cyan)
-            0.0f, 1.0f, 1.0f, 1.0f,
-            0.0f, 1.0f, 1.0f, 1.0f,
-            0.0f, 1.0f, 1.0f, 1.0f,
-            0.0f, 1.0f, 1.0f, 1.0f,
-            0.0f, 1.0f, 1.0f, 1.0f,
-            0.0f, 1.0f, 1.0f, 1.0f,
-
-            // Bottom face (magenta)
-            1.0f, 0.0f, 1.0f, 1.0f,
-            1.0f, 0.0f, 1.0f, 1.0f,
-            1.0f, 0.0f, 1.0f, 1.0f,
-            1.0f, 0.0f, 1.0f, 1.0f,
-            1.0f, 0.0f, 1.0f, 1.0f,
-            1.0f, 0.0f, 1.0f, 1.0f
-        };
-        
-        final float[] cubeNormalData = {
-            // Front face
-            0.0f, 0.0f, 1.0f,
-            0.0f, 0.0f, 1.0f,
-            0.0f, 0.0f, 1.0f,
-            0.0f, 0.0f, 1.0f,
-            0.0f, 0.0f, 1.0f,
-            0.0f, 0.0f, 1.0f,
-
-            // Right face 
-            1.0f, 0.0f, 0.0f,
-            1.0f, 0.0f, 0.0f,
-            1.0f, 0.0f, 0.0f,
-            1.0f, 0.0f, 0.0f,
-            1.0f, 0.0f, 0.0f,
-            1.0f, 0.0f, 0.0f,
-
-            // Back face 
-            0.0f, 0.0f, -1.0f,
-            0.0f, 0.0f, -1.0f,
-            0.0f, 0.0f, -1.0f,
-            0.0f, 0.0f, -1.0f,
-            0.0f, 0.0f, -1.0f,
-            0.0f, 0.0f, -1.0f,
-
-            // Left face 
-            -1.0f, 0.0f, 0.0f,
-            -1.0f, 0.0f, 0.0f,
-            -1.0f, 0.0f, 0.0f,
-            -1.0f, 0.0f, 0.0f,
-            -1.0f, 0.0f, 0.0f,
-            -1.0f, 0.0f, 0.0f,
-
-            // Top face 
-            0.0f, 1.0f, 0.0f,
-            0.0f, 1.0f, 0.0f,
-            0.0f, 1.0f, 0.0f,
-            0.0f, 1.0f, 0.0f,
-            0.0f, 1.0f, 0.0f,
-            0.0f, 1.0f, 0.0f,
-
-            // Bottom face 
-            0.0f, -1.0f, 0.0f,
-            0.0f, -1.0f, 0.0f,
-            0.0f, -1.0f, 0.0f,
-            0.0f, -1.0f, 0.0f,
-            0.0f, -1.0f, 0.0f,
-            0.0f, -1.0f, 0.0f
-        };
-        
         mContext = context;
-        
-        mCubePosition = ByteBuffer.allocateDirect(cubePositionData.length * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
-        mCubePosition.put(cubePositionData).position(0);
-        
-        mCubeColor = ByteBuffer.allocateDirect(cubeColorData.length * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
-        mCubeColor.put(cubeColorData).position(0);
-        
-        mCubeNormal = ByteBuffer.allocateDirect(cubeNormalData.length * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
-        mCubeNormal.put(cubeNormalData).position(0);        
+        mCube = Model.getModel(context, "cube");
     }
 
     public void onDrawFrame(GL10 glUnused) {
@@ -212,12 +52,20 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         
         GLES20.glUseProgram(mProgramHandle);
         
+        long time = SystemClock.uptimeMillis() % 10000L;        
+        float angleInDegrees = (360.0f / 10000.0f) * ((int) time);               
+        
         mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgramHandle, "u_MVPMatrix");
         mMVMatrixHandle = GLES20.glGetUniformLocation(mProgramHandle, "u_MVMatrix"); 
         mLightPosHandle = GLES20.glGetUniformLocation(mProgramHandle, "u_LightPos");
+        mTextureUniformHandle = GLES20.glGetUniformLocation(mProgramHandle, "u_Texture");
         mPositionHandle = GLES20.glGetAttribLocation(mProgramHandle, "a_Position");
-        mColorHandle = GLES20.glGetAttribLocation(mProgramHandle, "a_Color");
-        mNormalHandle = GLES20.glGetAttribLocation(mProgramHandle, "a_Normal"); 
+        mNormalHandle = GLES20.glGetAttribLocation(mProgramHandle, "a_Normal");
+        mTextureCoordinateHandle = GLES20.glGetAttribLocation(mProgramHandle, "a_TexCoordinate");
+        
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextureDataHandle);
+        GLES20.glUniform1i(mTextureUniformHandle, 0);
         
         Matrix.setIdentityM(mLightModelMatrix, 0);
         Matrix.translateM(mLightModelMatrix, 0, 0.0f, 0.0f, -3.0f);
@@ -227,18 +75,19 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         
         Matrix.setIdentityM(mModelMatrix, 0);
         Matrix.translateM(mModelMatrix, 0, 0.0f, 0.0f, -5.0f);
+        Matrix.rotateM(mModelMatrix, 0, angleInDegrees, 1.0f, 0.0f, 0.0f);
         
-        mCubePosition.position(0);
-        GLES20.glVertexAttribPointer(mPositionHandle, 3, GLES20.GL_FLOAT, false, 0, mCubePosition);
+        mCube.mVertexBuffer.position(0);
+        GLES20.glVertexAttribPointer(mPositionHandle, 3, GLES20.GL_FLOAT, false, 0, mCube.mVertexBuffer);
         GLES20.glEnableVertexAttribArray(mPositionHandle);
         
-        mCubeColor.position(0);
-        GLES20.glVertexAttribPointer(mColorHandle, 4, GLES20.GL_FLOAT, false, 0, mCubeColor);
-        GLES20.glEnableVertexAttribArray(mColorHandle);
-        
-        mCubeNormal.position(0);
-        GLES20.glVertexAttribPointer(mNormalHandle, 3, GLES20.GL_FLOAT, false, 0, mCubeNormal);
+        mCube.mNormalBuffer.position(0);
+        GLES20.glVertexAttribPointer(mNormalHandle, 3, GLES20.GL_FLOAT, false, 0, mCube.mNormalBuffer);
         GLES20.glEnableVertexAttribArray(mNormalHandle);
+        
+        mCube.mTextureBuffer.position(0);
+        GLES20.glVertexAttribPointer(mTextureCoordinateHandle, 2, GLES20.GL_FLOAT, false, 0, mCube.mTextureBuffer);
+        GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
         
         Matrix.multiplyMM(mMVPMatrix, 0, mViewMatrix, 0, mModelMatrix, 0);
         GLES20.glUniformMatrix4fv(mMVMatrixHandle, 1, false, mMVPMatrix, 0);
@@ -281,6 +130,8 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         final int pointVertexShaderHandle = ShaderHelper.compileShader(GLES20.GL_VERTEX_SHADER, RawReader.readFile(mContext, R.raw.pointvertexshader));
         final int pointFragmentShaderHandle = ShaderHelper.compileShader(GLES20.GL_FRAGMENT_SHADER, RawReader.readFile(mContext, R.raw.pointfragmentshader));
         mPointProgramHandle = ShaderHelper.createAndLinkProgram(pointVertexShaderHandle, pointFragmentShaderHandle);
+        
+        mTextureDataHandle = TextureHelper.loadTexture(mContext, R.drawable.texture);
     }
 
 }
